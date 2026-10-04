@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package catalog;
+
+option go_package = "shopik/services/catalog/pkg/catalogpb";
+message Product {
+    int64 id = 1;
+    string name = 2;
+    int64 price = 3;
+    int64 stock = 4;
+}
+
+message GetProductsByIDsRequest {
+  repeated int64 product_ids = 1;
+}
+
+message GetProductsByIDsResponse {
+  repeated Product products = 1;
+  repeated int64 missing_product_ids = 2;
+}
+
+service CatalogService {
+  rpc GetProductsByIDs(GetProductsByIDsRequest) returns (GetProductsByIDsResponse);
+}
