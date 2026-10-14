@@ -3,5 +3,6 @@ package handler
 type ProductForResponse struct {
 	ID    int64  `json:"id"`
 	Name  string `json:"name"`
-	Price int    `json:"price"`
+	Price int64  `json:"price"`
+	Stock int64  `json:"stock"`
 }

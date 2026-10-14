@@ -1,0 +1,1 @@
+protoc -I proto/catalog --go_out=./services/catalog/pkg/catalogpb --go_opt=paths=source_relative --go-grpc_out=./services/catalog/pkg/catalogpb --go-grpc_opt=paths=source_relative catalog.proto

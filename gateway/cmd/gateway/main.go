@@ -25,7 +25,7 @@ func main() {
 	proxyOrders := NewProxy(os.Getenv("ORDER_ADDRESS"))
 	r.Handle("/api/users/*", http.StripPrefix("/api/users", proxyUsers))
 	r.Handle("/api/catalog/*", http.StripPrefix("/api/catalog", proxyCatalog))
-	r.Handle("api/orders/*", http.StripPrefix("api/orders", proxyOrders))
+	r.Handle("/api/orders/*", http.StripPrefix("/api/orders", proxyOrders))
 	addr := ":8080"
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("http server error: %v", err)
