@@ -2,33 +2,42 @@ package repository
 
 import (
 	"context"
+	"shopik/services/user/internal/domain"
 	"sync"
 )
 
-type UserData struct {
-	ID       int
-	Username string
-	PassHash string
-}
-
 type InMemoryRepository struct {
-	userData map[int]UserData
+	userData map[string]domain.User
 	mu       sync.Mutex
-	nextID   int
+	nextID   int64
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
-		userData: make(map[int]UserData, 10),
+		userData: make(map[string]domain.User, 10),
 		nextID:   1,
 	}
 }
 
-func (r *InMemoryRepository) Save(ctx context.Context, user UserData) (int, error) {
+func (r *InMemoryRepository) Save(ctx context.Context, user domain.User) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	id := r.nextID
-	r.userData[id] = user
+	_, ok := r.userData[user.Email]
+	if ok {
+		return 0, domain.ErrEmailTaken
+	}
+	user.ID = r.nextID
+	r.userData[user.Email] = user
 	r.nextID++
-	return id, nil
+	return user.ID, nil
+}
+
+func (r *InMemoryRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	user, ok := r.userData[email]
+	if !ok {
+		return domain.User{}, domain.ErrUserNotFound
+	}
+	return user, nil
 }

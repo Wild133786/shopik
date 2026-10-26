@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-func Hash(password string) (result string, err error) {
+func HashPassword(password string) (result string, err error) {
 	const (
 		time            = 1
 		memory          = 64 * 1024
@@ -32,49 +32,59 @@ func Hash(password string) (result string, err error) {
 
 }
 
-func Verify(password string, encodedHash string) (bool, error) {
+func ComparePassword(password string, encodedHash string) (bool, error) { //logs needed
 	const (
-		wantSaltLen         = 16
 		wantHashParamsCount = 6
-		wantTime            = 1
-		wantMemory          = 64 * 1024
-		wantThreads         = 4
 		wantAlg             = "argon2id"
 		wantVersion         = 19
+		minTime             = 1
+		maxTime             = 10
+		minMemory           = 10 * 1024
+		maxMemory           = 1024 * 1024
+		minThreads          = 1
+		maxThreads          = 16
+		minSaltLen          = 16
+		maxSaltLen          = 32
 		wantKeyLen          = 32
 	)
 	hashStrSlice := strings.Split(encodedHash, "$")
 	if len(hashStrSlice) != wantHashParamsCount {
-		return false, fmt.Errorf("not enought hash+salt param, want: %d, got: %d", wantHashParamsCount, len(hashStrSlice))
+		return false, fmt.Errorf("not enough hash+salt param, want: %d, got: %d", wantHashParamsCount, len(hashStrSlice))
 	}
 	var (
 		version,
-		m,
-		t,
-		p,
 		keyLen int
+		m uint32
+		t uint32
+		p uint8
 	)
 	alg := hashStrSlice[1]
 	if alg != wantAlg {
-		return false, fmt.Errorf("ivalid alg, want: %s, got: %s", wantAlg, alg)
+		return false, fmt.Errorf("invalid alg, want: %s, got: %s", wantAlg, alg)
 	}
-	fmt.Sscanf(hashStrSlice[2], "v=%d", &version)
+	_, err := fmt.Sscanf(hashStrSlice[2], "v=%d", &version)
+	if err != nil {
+		return false, err
+	}
 	if version != wantVersion {
 		return false, fmt.Errorf("invalid argon2id version, want: %d, got: %d", wantVersion, version)
 	}
-	fmt.Sscanf(hashStrSlice[3], "m=%d,t=%d,p=%d", &m, &t, &p)
-	if m != wantMemory {
-		return false, fmt.Errorf("invalid memory param, want: %d, got: %d", wantMemory, m)
-	} else if t != wantTime {
-		return false, fmt.Errorf("invalid time param, want: %d, got: %d", wantTime, t)
-	} else if p != wantThreads {
-		return false, fmt.Errorf("invalid threads param, want: %d, got: %d", wantThreads, p)
+	_, err = fmt.Sscanf(hashStrSlice[3], "m=%d,t=%d,p=%d", &m, &t, &p)
+	if err != nil {
+		return false, err
+	}
+	if m < minMemory || m > maxMemory {
+		return false, fmt.Errorf("invalid memory param: %d", m)
+	} else if t < minTime || t > maxTime {
+		return false, fmt.Errorf("invalid time param: %d", t)
+	} else if p < minThreads || p > maxThreads {
+		return false, fmt.Errorf("invalid threads param: %d", p)
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(hashStrSlice[4])
 	if err != nil {
 		return false, err
-	} else if len(salt) != wantSaltLen {
-		return false, fmt.Errorf("invalid salt len, want: %d, got: %d", wantSaltLen, len(salt))
+	} else if len(salt) < minSaltLen || len(salt) > maxSaltLen {
+		return false, fmt.Errorf("invalid salt len: %d", len(salt))
 	}
 	expecctedHash, err := base64.RawStdEncoding.DecodeString(hashStrSlice[5])
 	if err != nil {
@@ -82,8 +92,8 @@ func Verify(password string, encodedHash string) (bool, error) {
 	}
 	keyLen = len(expecctedHash)
 	if keyLen != wantKeyLen {
-		return false, fmt.Errorf("invalid byte hahs len, want: %d, got: %d", wantKeyLen, keyLen)
+		return false, fmt.Errorf("invalid byte hash len, want: %d, got: %d", wantKeyLen, keyLen)
 	}
-	computedHash := argon2.IDKey([]byte(password), salt, uint32(t), uint32(m), uint8(p), uint32(keyLen))
+	computedHash := argon2.IDKey([]byte(password), salt, t, m, p, uint32(keyLen))
 	return subtle.ConstantTimeCompare(expecctedHash, computedHash) == 1, nil
 }

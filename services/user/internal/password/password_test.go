@@ -22,7 +22,7 @@ func TestHashFormat(t *testing.T) {
 		wantHashParamsCount = 6
 	)
 	pass := "oleg14213"
-	hashPassStr, err := password.Hash(pass)
+	hashPassStr, err := password.HashPassword(pass)
 	require.NoError(t, err, "password hash error")
 	hashStrSlice := strings.Split(hashPassStr, "$")
 	require.Equal(t, wantHashParamsCount, len(hashStrSlice))
@@ -51,12 +51,12 @@ func TestHashNotIdempotentHashAndSalt(t *testing.T) {
 	const wantHashParamsCount = 6
 	pass := "oleg14213"
 
-	firstHashPassStr, err := password.Hash(pass)
+	firstHashPassStr, err := password.HashPassword(pass)
 	require.NoError(t, err)
 	firstHashStrSlice := strings.Split(firstHashPassStr, "$")
 	require.Equal(t, wantHashParamsCount, len(firstHashStrSlice))
 
-	secondHashPassStr, err := password.Hash(pass)
+	secondHashPassStr, err := password.HashPassword(pass)
 	require.NoError(t, err)
 	secondHashStrSlice := strings.Split(secondHashPassStr, "$")
 	require.Equal(t, wantHashParamsCount, len(secondHashStrSlice))
@@ -68,12 +68,12 @@ func TestHashNotIdempotentHashAndSalt(t *testing.T) {
 func TestVerifySuccess(t *testing.T) {
 	pass := "oleg228"
 	computedHash := "$argon2id$v=19$m=65536,t=1,p=4$6gGS5CiokEYOQrmfqHki1A$mLlUyoa3xBcUU3WiPEYnnH8l2Gi7C4qYYQugJcXuPiA"
-	hashPassStr, err := password.Hash(pass)
+	hashPassStr, err := password.HashPassword(pass)
 	require.NoError(t, err)
-	ok, err := password.Verify(pass, hashPassStr)
+	ok, err := password.ComparePassword(pass, hashPassStr)
 	require.NoError(t, err)
 	require.Equal(t, true, ok)
-	ok2, err := password.Verify(pass, computedHash)
+	ok2, err := password.ComparePassword(pass, computedHash)
 	require.NoError(t, err)
 	require.Equal(t, ok2, ok)
 }
@@ -96,7 +96,7 @@ func TestVerify_InvalidHash(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ok, err := password.Verify("any-pass", tc.encoded)
+			ok, err := password.ComparePassword("any-pass", tc.encoded)
 			assert.Error(t, err)
 			assert.False(t, ok)
 		})
